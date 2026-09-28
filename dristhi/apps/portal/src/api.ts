@@ -31,11 +31,26 @@ export interface Block {
   measurement_method: string;
 }
 
+export interface AuditEvent {
+  block_id: string;
+  event_type: string;
+  actor: string;
+  detail: Record<string, unknown>;
+  created_at: string;
+}
+
 export const api = {
   listBlocks: () => req<Block[]>("/blocks"),
   getBlock: (id: string) => req<Block>(`/blocks/${id}`),
   approve: (id: string) => req<Block>(`/blocks/${id}/approve`, { method: "POST" }),
   flag: (id: string) => req<Block>(`/blocks/${id}/flag`, { method: "POST" }),
+  omepsSync: (id: string, weight?: number) =>
+    req<{ anomaly: boolean; divergence: number | null; weighbridge_volume_m3: number | null; message: string }>(
+      `/omeps/sync/${id}${weight != null ? `?weighbridge_weight_mt=${weight}` : ""}`,
+      { method: "POST" },
+    ),
+  blockAudit: (id: string) => req<AuditEvent[]>(`/blocks/${id}/audit`),
+  auditFeed: (limit = 100) => req<AuditEvent[]>(`/audit?limit=${limit}`),
   analytics: () => req<{ total: number; approved: number; pending: number; revenue_inr: number; anomalies: number }>("/analytics/summary"),
   submitCapture: (payload: unknown) =>
     req<Block>("/captures", { method: "POST", body: JSON.stringify(payload) }),

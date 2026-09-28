@@ -16,9 +16,13 @@ try:
 except Exception:  # pragma: no cover
     psycopg = None
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://dristhi:dristhi@localhost:5432/dristhi"
-)
+# When DATABASE_URL is unset we default to the DRISHTI Postgres. But an
+# explicitly *empty* value (e.g. bootstrap.sh --no-infra sets DATABASE_URL="")
+# means "no database, use the in-memory store" — so we must not fall back to a
+# connection string in that case, or we'd accidentally connect to whatever
+# Postgres happens to be listening on :5432 (which won't have our schema).
+_RAW_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://dristhi:dristhi@localhost:5432/dristhi")
+DATABASE_URL = _RAW_DATABASE_URL.strip()
 
 _M_PER_DEG = 111_320.0
 
@@ -126,6 +130,41 @@ class MemoryStore:
         self.blocks = {b["block_id"]: dict(b) for b in _SEED_BLOCKS}
         self.robots = {r["robot_id"]: dict(r) for r in _SEED_ROBOTS}
         self.audit: list[dict] = []
+        self._seed_audit()
+
+    def _seed_audit(self):
+        """Give the pre-seeded blocks a realistic lifecycle history so the audit
+        trail / traceability view is populated on a fresh demo (requirement 5)."""
+        from datetime import datetime, timedelta, timezone
+        base = datetime.now(timezone.utc) - timedelta(hours=6)
+        step = 0
+        for b in _SEED_BLOCKS:
+            bid = b["block_id"]
+            actor_bot = "DRISHTI-BOT-01" if b["source"] == "robot" else "mobile-app"
+
+            def ts(mins):
+                return (base + timedelta(minutes=step * 7 + mins)).isoformat()
+
+            self.audit.append({"block_id": bid, "event_type": "measured", "actor": actor_bot,
+                               "detail": {"method": b["measurement_method"], "confidence": b["confidence"]},
+                               "created_at": ts(0)})
+            self.audit.append({"block_id": bid, "event_type": "classified", "actor": "seigniorage-engine",
+                               "detail": {"class": b["classification"], "fee_inr": b["seigniorage_fee_inr"]},
+                               "created_at": ts(1)})
+            if b["status"] == "approved":
+                self.audit.append({"block_id": bid, "event_type": "omeps_synced", "actor": "officer",
+                                   "detail": {"anomaly": False, "message": "Synced to OMEPS 2.0"},
+                                   "created_at": ts(2)})
+                self.audit.append({"block_id": bid, "event_type": "approved", "actor": "officer",
+                                   "detail": {}, "created_at": ts(3)})
+            elif b["status"] == "flagged":
+                self.audit.append({"block_id": bid, "event_type": "omeps_synced", "actor": "officer",
+                                   "detail": {"anomaly": True, "divergence": 0.21,
+                                              "message": "AI vs weighbridge divergence exceeds tolerance"},
+                                   "created_at": ts(2)})
+                self.audit.append({"block_id": bid, "event_type": "flagged", "actor": "officer",
+                                   "detail": {"reason": "OMEPS anomaly"}, "created_at": ts(3)})
+            step += 1
 
     def list_quarries(self):
         return [dict(q) for q in QUARRIES]
@@ -150,7 +189,16 @@ class MemoryStore:
         return None
 
     def add_audit(self, block_id, event_type, actor, detail):
-        self.audit.append({"block_id": block_id, "event_type": event_type, "actor": actor, "detail": detail})
+        from datetime import datetime, timezone
+        self.audit.append({
+            "block_id": block_id, "event_type": event_type, "actor": actor,
+            "detail": detail, "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    def list_audit(self, block_id=None, limit=200):
+        events = [e for e in self.audit if block_id is None or e["block_id"] == block_id]
+        # newest first
+        return list(reversed(events))[:limit]
 
     def list_robots(self):
         return list(self.robots.values())
@@ -184,11 +232,21 @@ class PgStore:
 
     @classmethod
     def try_connect(cls) -> Optional["PgStore"]:
-        if psycopg is None:
+        # Empty DATABASE_URL => caller explicitly wants the in-memory store.
+        if psycopg is None or not DATABASE_URL:
             return None
         try:
             conn = psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=True, connect_timeout=3)
-            conn.execute("SELECT 1")
+            # Only use Postgres if the DRISHTI schema is actually present.
+            # Otherwise we'd have connected to some unrelated local Postgres and
+            # every query would 500 mid-demo. Fall back to memory instead.
+            row = conn.execute(
+                "SELECT to_regclass('public.blocks') IS NOT NULL "
+                "AND to_regclass('public.robots') IS NOT NULL AS ready"
+            ).fetchone()
+            if not row or not row.get("ready"):
+                conn.close()
+                return None
             return cls(conn)
         except Exception:
             return None
@@ -238,6 +296,19 @@ class PgStore:
             "INSERT INTO audit_events (block_id, event_type, actor, detail) VALUES (%s,%s,%s,%s)",
             (block_id, event_type, actor, json.dumps(detail)),
         )
+
+    def list_audit(self, block_id=None, limit=200):
+        if block_id is None:
+            return self.conn.execute(
+                "SELECT block_id, event_type, actor, detail, created_at "
+                "FROM audit_events ORDER BY created_at DESC, id DESC LIMIT %s",
+                (limit,),
+            ).fetchall()
+        return self.conn.execute(
+            "SELECT block_id, event_type, actor, detail, created_at "
+            "FROM audit_events WHERE block_id=%s ORDER BY created_at DESC, id DESC LIMIT %s",
+            (block_id, limit),
+        ).fetchall()
 
     def list_quarries(self):
         rows = self.conn.execute(

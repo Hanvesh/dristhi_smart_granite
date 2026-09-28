@@ -36,6 +36,13 @@ echo "== OMEPS cross-validation (anomaly) =="
 SYNC=$(curl -s -X POST "$GW/omeps/sync/QRY-SMOKE-001?weighbridge_weight_mt=6.4" -H 'Authorization: Bearer demo.officer.officer')
 check "omeps sync responds" "$SYNC" '"synced":true'
 
+echo "== Audit & traceability =="
+AUDIT=$(curl -s "$GW/blocks/QRY-SMOKE-001/audit")
+check "block audit has measurement event"    "$AUDIT" '"event_type":"measured"'
+check "block audit has classification event"  "$AUDIT" '"event_type":"classified"'
+check "block audit has approval event"        "$AUDIT" '"event_type":"approved"'
+check "dept-wide audit feed responds"         "$(curl -s "$GW/audit?limit=5")" '"event_type"'
+
 echo "== Analytics =="
 check "analytics summary" "$(curl -s $GW/analytics/summary)" '"total"'
 

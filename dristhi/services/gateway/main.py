@@ -196,6 +196,22 @@ def omeps_sync(block_id: str, weighbridge_weight_mt: Optional[float] = None,
     return res
 
 
+# ---- Audit & traceability (requirement 5) ----
+@app.get("/blocks/{block_id}/audit")
+def block_audit(block_id: str, _: Principal = Depends(verify_token)):
+    """Full lifecycle trail for one block: measurement -> classification ->
+    OMEPS cross-validation -> approval/flag -> dispatch. Ordered newest-first."""
+    if not store.get_block(block_id):
+        raise HTTPException(404, "block not found")
+    return store.list_audit(block_id)
+
+
+@app.get("/audit")
+def audit_feed(limit: int = 100, _: Principal = Depends(verify_token)):
+    """Department-wide audit feed across all blocks (newest first)."""
+    return store.list_audit(None, max(1, min(limit, 500)))
+
+
 # ---- Analytics ----
 @app.get("/analytics/summary")
 def analytics(_: Principal = Depends(verify_token)):

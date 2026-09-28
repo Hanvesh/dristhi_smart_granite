@@ -20,8 +20,8 @@ demo against — memorize this table; each row maps to a moment in the live demo
 | 1 | **Granite block volume estimation** from standardized images | Robot/mobile capture → AI measures L×W×H + volume + confidence | Portal → Blocks |
 | 2 | **Automated seigniorage classification** (Above/Below Gangsaw + fee) | Same block auto-classified and priced by the rules engine | Portal → Blocks |
 | 3 | **Mobile app for field capture** (GPS, timestamp, Block ID, quarry) | Mobile app / Portal capture form submits a geo-tagged block | Portal → New Capture |
-| 4 | **OMEPS 2.0 integration** cross-validating AI volume vs weighbridge/dispatch | Officer runs OMEPS sync; anomaly auto-flagged | Portal → Blocks |
-| 5 | **Audit & traceability** (measurement → dispatch lifecycle) | Every step recorded as an audit event; analytics roll-up | Portal → Analytics |
+| 4 | **OMEPS 2.0 integration** cross-validating AI volume vs weighbridge/dispatch | Officer clicks **OMEPS sync** on a block; anomaly auto-flagged | Portal → Blocks |
+| 5 | **Audit & traceability** (measurement → dispatch lifecycle) | Click a block for its lifecycle timeline; dept-wide append-only feed | Portal → Blocks / Audit Trail |
 | ★ | **Beyond the brief:** autonomous roaming robot on AWS IoT (hardware-accurate stereo depth, zero human effort) | Robot roams the quarry live on a map, measuring blocks over AWS IoT | Robot Console |
 
 **One-line pitch:** *DRISHTI replaces subjective manual tape measurement with an
@@ -68,7 +68,7 @@ a terminal open for the robot simulator.
 
 Smoke-check everything is green before you go on stage:
 ```bash
-./scripts/smoke_test.sh          # expect: RESULT: 14 passed, 0 failed
+./scripts/smoke_test.sh          # expect: RESULT: 18 passed, 0 failed
 ```
 
 ---
@@ -127,7 +127,9 @@ pit — each rendered at its actual measured size**. Point at the
 > syncs when back online. Same AI pipeline, same result. Requirement three." **(R3)**
 
 ### Scene 5 — OMEPS 2.0 cross-validation & fraud detection  (R4, 75 sec)
-**[DO]** On a pending block, as the officer, trigger the OMEPS sync (button/API):
+**[DO]** On a pending block, as the officer, click the **OMEPS sync** button in
+the Actions column (it cross-validates against a weighbridge weight). Equivalent
+CLI, if you prefer the terminal:
 ```bash
 curl -s -X POST "http://localhost:8080/omeps/sync/<BLOCK_ID>?weighbridge_weight_mt=6.4" \
   -H 'Authorization: Bearer demo.officer.officer'
@@ -139,12 +141,20 @@ curl -s -X POST "http://localhost:8080/omeps/sync/<BLOCK_ID>?weighbridge_weight_
 > requirement four, and it's exactly the fraud the department is losing money
 > to." **(R4)**
 
-### Scene 6 — Audit trail & department analytics  (R5, 45 sec)
-**[DO]** Switch to the **Admin Analytics** tab.
-> **[SAY]** "Every action — measured, classified, approved, OMEPS-synced — is
-> written to an immutable **audit trail**. The department sees totals, revenue,
-> pending reviews and anomalies district-wide. Full traceability from the block
-> in the quarry to dispatch clearance. Requirement five." **(R5)**
+### Scene 6 — Audit trail & department analytics  (R5, 60 sec)
+**[DO]** In the **Officer Portal → Blocks**, click any block ID to expand its
+**lifecycle timeline** (measured → classified → OMEPS cross-validated →
+approved/flagged, each with timestamp + actor).
+> **[SAY]** "Click any block and you see its complete journey — who measured it,
+> when it was classified and priced, the OMEPS check, and the officer decision.
+> Every action is an immutable audit event."
+
+**[DO]** Open the **Audit Trail** tab for the department-wide, append-only feed;
+then switch to **Admin Analytics**.
+> **[SAY]** "Across the department, this is the full append-only audit feed —
+> and the analytics roll-up: totals, revenue, pending reviews and anomalies
+> district-wide. Complete traceability from the block in the quarry to dispatch
+> clearance. Requirement five." **(R5)**
 
 ### Scene 7 — Close (30 sec)
 > **[SAY]** "Everything you just saw is **100% open source** — no vendor lock-in,
@@ -178,13 +188,14 @@ curl -s -X POST "http://localhost:8080/omeps/sync/<BLOCK_ID>?weighbridge_weight_
 
 Run these before the presentation; screenshot the passing output as a backup slide.
 
-### 5.1 End-to-end smoke test (14 checks)
+### 5.1 End-to-end smoke test (18 checks)
 ```bash
 ./scripts/smoke_test.sh
-# RESULT: 14 passed, 0 failed
+# RESULT: 18 passed, 0 failed
 ```
 Covers health, capture→measure→assess→persist, RBAC (officer approves, operator
-gets 403), OMEPS anomaly detection, analytics, robot survey.
+gets 403), OMEPS anomaly detection, **audit trail per-block + dept-wide feed**,
+analytics, robot survey.
 
 ### 5.2 Roaming robot integration (verified)
 The roam is now **triggered from the UI** (Start survey) — the gateway runs it
@@ -269,7 +280,7 @@ Have Part 5 screenshots ready as a backup slide in case the laptop misbehaves.
 
 | Area | Demo state | Production path |
 |------|-----------|-----------------|
-| Capture → measure → assess → persist → OMEPS → analytics | fully working | — |
+| Capture → measure → assess → persist → OMEPS → audit trail → analytics | fully working | — |
 | RBAC / two logins | working (demo tokens) | Keycloak JWT (already wired) |
 | AI dimensions | deterministic estimator | YOLOv11 + Depth Anything V2 / OAK-D stereo |
 | Seigniorage slabs | generic rates | gazetted AP schedule |

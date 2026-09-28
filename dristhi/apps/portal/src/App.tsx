@@ -6,6 +6,7 @@ import { Login } from "./Login";
 import { BlocksView } from "./views/BlocksView";
 import { AnalyticsView } from "./views/AnalyticsView";
 import { CaptureView } from "./views/CaptureView";
+import { AuditView } from "./views/AuditView";
 
 export function App() {
   const [session, setSession] = useState<Session | null>(getSession());
@@ -24,6 +25,7 @@ export function App() {
   const canReview = session.role === "officer" || session.role === "admin";
   const canAnalytics = session.role === "admin";
   const canCapture = session.role === "operator" || session.role === "admin";
+  const canAudit = session.role === "officer" || session.role === "admin";
 
   return (
     <div>
@@ -35,6 +37,7 @@ export function App() {
             <nav style={{ display: "flex", gap: 16, marginLeft: 24 }}>
               {canReview && <Link to="/blocks">Blocks</Link>}
               {canCapture && <Link to="/capture">New Capture</Link>}
+              {canAudit && <Link to="/audit">Audit Trail</Link>}
               {canAnalytics && <Link to="/analytics">Analytics</Link>}
             </nav>
           </>
@@ -52,6 +55,7 @@ export function App() {
           <Route path="/" element={<Navigate to={canReview ? "/blocks" : "/capture"} />} />
           <Route path="/blocks" element={canReview ? <BlocksView role={session.role} /> : <Denied />} />
           <Route path="/capture" element={canCapture ? <CaptureView /> : <Denied />} />
+          <Route path="/audit" element={canAudit ? <AuditView /> : <Denied />} />
           <Route path="/analytics" element={canAnalytics ? <AnalyticsView /> : <Denied />} />
         </Routes>
       </main>
