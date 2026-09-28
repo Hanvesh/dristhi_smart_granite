@@ -1,0 +1,30 @@
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Java
+target/
+*.class
+.gradle/
+build/
+
+# Env / secrets
+.env
+*.env.local
+
+# Data / volumes
+infra/data/
+*.log
+
+# OS
+.DS_Store

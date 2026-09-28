@@ -1,0 +1,51 @@
+/*
+ * StartupOS design tokens (placeholder approximation).
+ * Palette derived from the PeopleWave proposal brand colors.
+ * Replace with the real StartupOS token set when available.
+ */
+:root {
+  /* Brand palette */
+  --sos-dark: #1B2A4A;
+  --sos-blue: #2196F3;
+  --sos-section-blue: #1565C0;
+  --sos-orange: #F5A623;
+  --sos-gray: #6B7B8D;
+  --sos-light: #EBF4FF;
+
+  /* Semantic */
+  --sos-bg: #F7FAFF;
+  --sos-surface: #FFFFFF;
+  --sos-border: #DCE6F2;
+  --sos-text: #1B2A4A;
+  --sos-text-muted: #6B7B8D;
+  --sos-success: #2E7D32;
+  --sos-warning: #F5A623;
+  --sos-danger: #C62828;
+
+  /* Spacing scale */
+  --sos-space-1: 4px;
+  --sos-space-2: 8px;
+  --sos-space-3: 12px;
+  --sos-space-4: 16px;
+  --sos-space-5: 24px;
+  --sos-space-6: 32px;
+
+  /* Radius / shadow */
+  --sos-radius: 10px;
+  --sos-radius-sm: 6px;
+  --sos-shadow: 0 1px 3px rgba(27, 42, 74, 0.08), 0 4px 12px rgba(27, 42, 74, 0.06);
+
+  /* Typography */
+  --sos-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --sos-font-size: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--sos-font);
+  font-size: var(--sos-font-size);
+  color: var(--sos-text);
+  background: var(--sos-bg);
+}

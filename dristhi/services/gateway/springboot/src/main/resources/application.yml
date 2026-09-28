@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dristhi
+    username: dristhi
+    password: dristhi
+  jpa:
+    hibernate:
+      ddl-auto: none
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8090/realms/drishti
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: drishti-gateway
+
+drishti:
+  vision-url: http://localhost:8001
+  seigniorage-url: http://localhost:8002
+  omeps-url: http://localhost:8003

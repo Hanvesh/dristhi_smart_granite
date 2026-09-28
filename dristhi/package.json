@@ -1,0 +1,17 @@
+{
+  "name": "dristhi",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Project DRISHTI - AI granite block measurement & seigniorage (open source)",
+  "workspaces": [
+    "packages/*",
+    "apps/portal",
+    "apps/robot-console"
+  ],
+  "scripts": {
+    "dev:portal": "npm --workspace apps/portal run dev",
+    "dev:robot": "npm --workspace apps/robot-console run dev",
+    "build": "npm --workspace packages/ui run build && npm --workspace apps/portal run build && npm --workspace apps/robot-console run build",
+    "build:ui": "npm --workspace packages/ui run build"
+  }
+}

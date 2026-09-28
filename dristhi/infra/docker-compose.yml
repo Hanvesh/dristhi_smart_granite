@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: dristhi-postgres
+    environment:
+      POSTGRES_USER: dristhi
+      POSTGRES_PASSWORD: dristhi
+      POSTGRES_DB: dristhi
+    ports:
+      # Host port is configurable to avoid clashing with a local Postgres.
+      # Override with DRISHTI_PG_PORT (e.g. DRISHTI_PG_PORT=5433 docker compose up -d).
+      - "${DRISHTI_PG_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init/db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dristhi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # MinIO (S3-compatible object store) is OPTIONAL and lives behind the
+  # "storage" profile, because some environments/networks cannot pull the
+  # MinIO images anonymously (Docker Hub minio/minio is gated; quay.io mirror
+  # requires auth). When MinIO is not running, the backend automatically uses a
+  # local-filesystem evidence store (see services/gateway store & bootstrap).
+  #
+  # To run WITH MinIO (where images are pullable):
+  #     docker compose --profile storage up -d
+  # ─────────────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    container_name: dristhi-minio
+    profiles: ["storage"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: dristhi
+      MINIO_ROOT_PASSWORD: dristhi123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-06-12T14-34-03Z
+    container_name: dristhi-minio-init
+    profiles: ["storage"]
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 dristhi dristhi123;
+      mc mb -p local/drishti-evidence || true;
+      mc anonymous set download local/drishti-evidence || true;
+      echo 'MinIO bucket ready';
+      "
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: dristhi-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8090
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./init/keycloak:/opt/keycloak/data/import:ro
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dristhi-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./init/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: dristhi-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dristhi-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  pgdata:
+  miniodata:

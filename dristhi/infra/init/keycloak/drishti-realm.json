@@ -1,0 +1,66 @@
+{
+  "realm": "drishti",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "operator" },
+      { "name": "officer" },
+      { "name": "admin" },
+      { "name": "robot-operator" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "drishti-portal",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "drishti-robot-console",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:5174/*"],
+      "webOrigins": ["http://localhost:5174"],
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "drishti-gateway",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "officer",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "officer", "temporary": false }],
+      "realmRoles": ["officer"]
+    },
+    {
+      "username": "operator",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "operator", "temporary": false }],
+      "realmRoles": ["operator"]
+    },
+    {
+      "username": "admin-user",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "robotop",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "robotop", "temporary": false }],
+      "realmRoles": ["robot-operator"]
+    }
+  ]
+}
