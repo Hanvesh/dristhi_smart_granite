@@ -3,6 +3,8 @@ uvicorn[standard]==0.30.1
 pydantic==2.7.1
 httpx==0.27.0
 psycopg[binary]==3.1.19
+# Secure robot link: ECDH P-256, HKDF-SHA256, AES-256-GCM (pyca/cryptography).
+cryptography==50.0.1
 # Optional: only needed when DRISHTI_IOT_MODE=aws (AWS IoT Core MQTT bridge).
 # The gateway runs fine without it (robot uses the HTTP telemetry fallback).
 # awsiotsdk==1.21.3

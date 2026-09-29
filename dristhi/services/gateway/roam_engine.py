@@ -92,11 +92,17 @@ class RoamEngine:
         state = {"lat": home_lat, "lon": home_lon, "battery": float(battery)}
 
         def emit(status, waypoint):
-            self._update_telemetry(robot_id, {
-                "status": status, "battery_percent": int(round(state["battery"])),
-                "lat": round(state["lat"], 6), "lon": round(state["lon"], 6),
-                "waypoint": waypoint,
-            })
+            try:
+                self._update_telemetry(robot_id, {
+                    "status": status, "battery_percent": int(round(state["battery"])),
+                    "lat": round(state["lat"], 6), "lon": round(state["lon"], 6),
+                    "waypoint": waypoint,
+                })
+            except Exception as e:  # pragma: no cover
+                # A transient store error must not kill the roam thread mid-drive,
+                # or the robot would freeze. Log and keep roaming; the next tick
+                # will try again.
+                print(f"[roam] {robot_id} telemetry emit failed: {e}")
 
         def drive_to(tlat, tlon, status, waypoint, drain=True):
             """Interpolate from current position to target over many fine steps

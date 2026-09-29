@@ -101,6 +101,6 @@ cat <<EOF
   Grafana:               http://localhost:3000    (admin/admin)
 
 Run the smoke test:   ./scripts/smoke_test.sh
-Simulate a robot:     python3 robot/sim_agent.py --count 5
+Simulate a robot:     .venv/bin/python robot/sim_agent.py --blocks 5   (raw captures over the secure robot link)
 Stop everything:      ./scripts/bootstrap.sh --stop
 EOF

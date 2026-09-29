@@ -21,6 +21,9 @@ build/
 # Env / secrets
 .env
 *.env.local
+# AWS IoT device certificates + private keys written by robot/aws-iot/provision.sh
+robot/aws-iot/certs/
+*.pem.key
 
 # Data / volumes
 infra/data/

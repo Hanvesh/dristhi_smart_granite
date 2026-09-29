@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ConnectAsTheGatewayBridge",
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "arn:aws:iot:*:*:client/drishti-gateway-bridge"
+    },
+    {
+      "Sid": "SubscribeToRobotUplinkFilters",
+      "Effect": "Allow",
+      "Action": "iot:Subscribe",
+      "Resource": [
+        "arn:aws:iot:*:*:topicfilter/drishti/robots/+/telemetry",
+        "arn:aws:iot:*:*:topicfilter/drishti/robots/+/captures"
+      ]
+    },
+    {
+      "Sid": "ReceiveRobotUplinkOnly",
+      "Effect": "Allow",
+      "Action": "iot:Receive",
+      "Resource": [
+        "arn:aws:iot:*:*:topic/drishti/robots/*/telemetry",
+        "arn:aws:iot:*:*:topic/drishti/robots/*/captures"
+      ]
+    }
+  ]
+}

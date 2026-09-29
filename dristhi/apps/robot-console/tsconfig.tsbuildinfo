@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/Login.tsx","./src/Quarry3D.tsx","./src/api.ts","./src/auth.ts","./src/main.tsx","./src/vite-env.d.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/BatteryGauge.tsx","./src/Login.tsx","./src/SceneView.tsx","./src/auth.ts","./src/main.tsx","./src/portalLink.ts","./src/quarryScene.ts","./src/secureLink.ts","./src/simWorld.ts","./src/vite-env.d.ts"],"version":"5.9.3"}

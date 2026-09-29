@@ -2,30 +2,21 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "ConnectOnlyAsItsOwnRegisteredThing",
       "Effect": "Allow",
-      "Action": ["iot:Connect"],
-      "Resource": ["arn:aws:iot:*:*:client/drishti-*"]
+      "Action": "iot:Connect",
+      "Resource": "arn:aws:iot:*:*:client/${iot:Connection.Thing.ThingName}",
+      "Condition": {
+        "Bool": { "iot:Connection.Thing.IsAttached": "true" }
+      }
     },
     {
+      "Sid": "PublishOnlyToItsOwnTopics",
       "Effect": "Allow",
-      "Action": ["iot:Publish"],
+      "Action": "iot:Publish",
       "Resource": [
-        "arn:aws:iot:*:*:topic/drishti/robots/*/telemetry",
-        "arn:aws:iot:*:*:topic/drishti/robots/*/blocks"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": ["iot:Subscribe"],
-      "Resource": [
-        "arn:aws:iot:*:*:topicfilter/drishti/robots/*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": ["iot:Receive"],
-      "Resource": [
-        "arn:aws:iot:*:*:topic/drishti/robots/*"
+        "arn:aws:iot:*:*:topic/drishti/robots/${iot:Connection.Thing.ThingName}/telemetry",
+        "arn:aws:iot:*:*:topic/drishti/robots/${iot:Connection.Thing.ThingName}/captures"
       ]
     }
   ]

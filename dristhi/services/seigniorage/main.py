@@ -18,6 +18,16 @@ class AssessResponse(BaseModel):
     classification: str
     granite_category: str
     seigniorage_fee_inr: float
+    rate_per_m3_inr: float
+    tonnage_mt: float
+    category_name: str
+    threshold_m3: float
+    base_rate_per_m3_inr: float
+    premium_multiplier: float
+    density_mt_per_m3: float
+    dmf_inr: float
+    nmet_inr: float
+    total_payable_inr: float
 
 
 @app.get("/health")

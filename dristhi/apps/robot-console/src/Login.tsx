@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { BrandLogo, Card, Button } from "@drishti/ui";
 import { login } from "./auth";
+import { portalUrl } from "./portalLink";
 
 export function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("robotop");
@@ -24,8 +25,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       <Card style={{ width: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <BrandLogo height={40} />
-          <h2 style={{ margin: "16px 0 4px" }}>Robot Operations Console</h2>
-          <p style={{ margin: 0, color: "var(--sos-text-muted)" }}>Field control room sign-in</p>
+          <h2 style={{ margin: "16px 0 4px" }}>Robot View</h2>
+          <p style={{ margin: 0, color: "var(--sos-text-muted)" }}>Robot-operator sign-in · capture &amp; transmit</p>
         </div>
         <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           <label style={{ fontSize: 13, fontWeight: 600 }}>Username
@@ -36,6 +37,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           <Button type="submit">Sign in</Button>
         </form>
         <p style={{ fontSize: 12, color: "var(--sos-text-muted)", marginTop: 16 }}>Demo: robotop / robotop</p>
+        <a href={portalUrl()} style={{ fontSize: 13, fontWeight: 600, color: "var(--sos-blue)" }}>← Back to Portal</a>
       </Card>
     </div>
   );

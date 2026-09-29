@@ -1,8 +1,11 @@
 import type { Block } from "./api";
 
+// Offline fallback blocks. Enriched with the same MT basis / rate / category
+// fields the live backend pipeline produces, so the Portal renders identical
+// numbers online and offline (kept in sync with services/seigniorage/rules.py).
 export const DEMO_BLOCKS: Block[] = [
   {
-    block_id: "QRY-AMR-2026-0847",
+    block_id: "QRY-AMR-2026-0100",
     quarry_id: "APQRY-0023",
     length_m: 2.34,
     width_m: 1.12,
@@ -11,12 +14,16 @@ export const DEMO_BLOCKS: Block[] = [
     confidence: 0.94,
     classification: "below_gangsaw",
     seigniorage_fee_inr: 4560,
+    rate_per_m3_inr: 2000,
+    tonnage_mt: 6.84,
+    category_name: "Black Galaxy (Below Gangsaw)",
+    granite_category: "black_galaxy",
     source: "robot",
     status: "approved",
     measurement_method: "robot_stereo_pointcloud",
   },
   {
-    block_id: "QRY-AMR-2026-0848",
+    block_id: "QRY-AMR-2026-0101",
     quarry_id: "APQRY-0023",
     length_m: 3.1,
     width_m: 1.55,
@@ -25,12 +32,16 @@ export const DEMO_BLOCKS: Block[] = [
     confidence: 0.88,
     classification: "above_gangsaw",
     seigniorage_fee_inr: 12500,
+    rate_per_m3_inr: 2000,
+    tonnage_mt: 18.75,
+    category_name: "Black Galaxy (Above Gangsaw)",
+    granite_category: "black_galaxy",
     source: "robot",
     status: "pending",
     measurement_method: "robot_stereo_pointcloud",
   },
   {
-    block_id: "QRY-ONG-2026-0112",
+    block_id: "QRY-ONG-2026-0100",
     quarry_id: "APQRY-0041",
     length_m: 1.9,
     width_m: 0.95,
@@ -39,6 +50,10 @@ export const DEMO_BLOCKS: Block[] = [
     confidence: 0.72,
     classification: "below_gangsaw",
     seigniorage_fee_inr: 2520,
+    rate_per_m3_inr: 2000,
+    tonnage_mt: 3.78,
+    category_name: "Black Galaxy (Below Gangsaw)",
+    granite_category: "black_galaxy",
     source: "mobile",
     status: "flagged",
     measurement_method: "mobile_monocular",

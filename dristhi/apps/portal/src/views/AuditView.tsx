@@ -16,6 +16,9 @@ const EVENT_META: Record<string, { label: string; color: string; icon: string }>
   omeps_synced: { label: "OMEPS cross-validated", color: "#0a9396", icon: "O" },
   approved: { label: "Approved", color: "var(--sos-success)", icon: "A" },
   flagged: { label: "Flagged (anomaly)", color: "var(--sos-danger)", icon: "!" },
+  rejected: { label: "Rejected", color: "var(--sos-danger)", icon: "R" },
+  transmitted: { label: "Transmitted (secure robot link)", color: "#5b3fd1", icon: "T" },
+  calculation_warning: { label: "Calculation warning", color: "#B26A00", icon: "W" },
   survey_started: { label: "Survey started", color: "var(--sos-blue)", icon: "S" },
   survey_stopped: { label: "Survey stopped", color: "var(--sos-text-muted)", icon: "S" },
 };
