@@ -21,6 +21,7 @@ from typing import Optional
 
 import httpx
 
+from audit_changes import ASSESSMENT_FIELDS, MEASUREMENT_FIELDS, snapshot
 from quarry_registry import geofence, get_quarry
 from robot_schema import RawCapture
 
@@ -173,8 +174,11 @@ def run_capture_pipeline(store, services: ComputeServices, capture_id: str) -> d
 
     with _alloc_lock:  # block ids are allocated + inserted atomically
         block_id = cap.get("block_id") or store.allocate_block_id(raw.block_ref)
-        store.upsert_block(_block(block_id, raw.quarry_id, "robot", m, a,
-                                  gnss.lat if gnss else None, gnss.lon if gnss else None))
+        prev = store.get_block(block_id)  # None unless the capture already had a block
+        was_measured, was_assessed = snapshot(prev, MEASUREMENT_FIELDS), snapshot(prev, ASSESSMENT_FIELDS)
+        saved = store.upsert_block(_block(block_id, raw.quarry_id, "robot", m, a,
+                                          gnss.lat if gnss else None, gnss.lon if gnss else None))
+        now_measured, now_assessed = snapshot(saved, MEASUREMENT_FIELDS), snapshot(saved, ASSESSMENT_FIELDS)
         store.set_capture_block(capture_id, block_id)
 
     steps = [raw_step,
@@ -192,10 +196,12 @@ def run_capture_pipeline(store, services: ComputeServices, capture_id: str) -> d
     store.add_audit(block_id, "transmitted", device_id,
                     {"capture_id": capture_id, "msg_id": cap.get("msg_id"), "channel": "ECDH-P256/HKDF-SHA256/A256GCM"})
     store.add_audit(block_id, "measured", "vision-service",
-                    {"method": m["measurement_method"], "confidence": m["confidence"]})
+                    {"method": m["measurement_method"], "confidence": m["confidence"],
+                     "before": was_measured, "after": now_measured})
     store.add_audit(block_id, "classified", "seigniorage-engine",
                     {"class": a["classification"], "fee_inr": a["seigniorage_fee_inr"],
-                     "total_payable_inr": a.get("total_payable_inr")})
+                     "total_payable_inr": a.get("total_payable_inr"),
+                     "before": was_assessed, "after": now_assessed})
     if warnings:
         store.add_audit(block_id, "calculation_warning", "portal-pipeline",
                         {"warnings": ", ".join(w["code"] for w in warnings)})

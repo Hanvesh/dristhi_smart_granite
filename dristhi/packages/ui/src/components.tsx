@@ -45,7 +45,9 @@ export function Button({
         borderRadius: "var(--sos-radius-sm)",
         padding: "8px 16px",
         fontWeight: 600,
-        cursor: "pointer",
+        // Disabled buttons must look disabled, or a click that does nothing reads as a bug.
+        cursor: rest.disabled ? "not-allowed" : "pointer",
+        opacity: rest.disabled ? 0.55 : 1,
         fontSize: 14,
         ...style,
       }}

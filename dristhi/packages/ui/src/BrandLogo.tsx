@@ -1,40 +1,32 @@
 import React from "react";
+import fullLogo from "./assets/peoplewave-logo.png";
+import compactLogo from "./assets/peoplewave-logo-compact.png";
 
 /**
- * PeopleWave brand logo.
- * PLACEHOLDER: inline SVG approximation. To use the official asset, replace the
- * SVG below with an <img src="/peoplewave-logo.png" .../> and drop the file into
- * each app's /public folder.
+ * Official PeopleWave logo (transparent PNGs made from the brand artwork).
+ *
+ * - "compact" (default): icon + wordmark, for headers and other small spots.
+ * - "full": adds the "Building smarter enterprises, together." tagline. Use it
+ *   at 48px tall or more; below that the tagline is not legible.
+ *
+ * Intrinsic sizes go in the width/height attributes so the layout doesn't
+ * shift while the image loads; maxWidth lets it shrink in narrow containers.
  */
-export function BrandLogo({ height = 32 }: { height?: number }) {
+const LOGOS = {
+  compact: { src: compactLogo, width: 514, height: 68, alt: "PeopleWave" },
+  full: { src: fullLogo, width: 563, height: 92, alt: "PeopleWave — Building smarter enterprises, together." },
+} as const;
+
+export function BrandLogo({ height = 26, variant = "compact" }: { height?: number; variant?: keyof typeof LOGOS }) {
+  const logo = LOGOS[variant];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <svg
-        height={height}
-        viewBox="0 0 40 40"
-        role="img"
-        aria-label="PeopleWave logo"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect width="40" height="40" rx="9" fill="var(--sos-dark)" />
-        <path
-          d="M6 26c4-8 8-8 12 0s8 8 12 0"
-          stroke="var(--sos-blue)"
-          strokeWidth="3.2"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <path
-          d="M6 20c4-8 8-8 12 0s8 8 12 0"
-          stroke="var(--sos-orange)"
-          strokeWidth="3.2"
-          fill="none"
-          strokeLinecap="round"
-        />
-      </svg>
-      <span style={{ fontWeight: 700, color: "var(--sos-dark)", fontSize: 16 }}>
-        PeopleWave
-      </span>
-    </span>
+    <img
+      src={logo.src}
+      alt={logo.alt}
+      width={Math.round((height * logo.width) / logo.height)}
+      height={height}
+      draggable={false}
+      style={{ display: "inline-block", verticalAlign: "middle", maxWidth: "100%", height: "auto", flexShrink: 0 }}
+    />
   );
 }

@@ -1,17 +1,24 @@
-import React, { useEffect, useState } from "react";
-import { Card, Table, Button, Badge, inr, inrExact, seigniorageBreakdown, classificationLabel, omepsCrossCheck } from "@drishti/ui";
+import React, { useEffect, useMemo, useState } from "react";
+import { Card, Table, Button, Badge, inr, inrExact, seigniorageBreakdown, classificationLabel, graniteLabel, omepsCrossCheck } from "@drishti/ui";
 import type { OmepsResult } from "@drishti/ui";
 import { Link } from "react-router-dom";
 import { api, ApiError, Block, AuditEvent } from "../api";
 import { DEMO_BLOCKS } from "../demoData";
 import { AuditTimeline } from "./AuditView";
+import { SearchBox, matchesQuery, statusTone } from "./shared";
 import type { Role } from "../auth";
 
-const toneFor = (status: string) =>
-  status === "approved" ? "success" : status === "flagged" || status === "rejected" ? "danger" : "warning";
+/** What the block search matches against: IDs, status, class, category, source and method. */
+const searchText = (b: Block) =>
+  [
+    b.block_id, b.quarry_id, b.status, b.source, b.measurement_method, b.classification,
+    classificationLabel(b.classification), b.category_name, b.granite_category,
+    b.granite_category ? graniteLabel(b.granite_category) : null,
+  ].filter(Boolean).join(" ");
 
 export function BlocksView({ role }: { role: Role }) {
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [query, setQuery] = useState("");
   const [live, setLive] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
@@ -88,11 +95,20 @@ export function BlocksView({ role }: { role: Role }) {
     }
   };
 
+  const searching = query.trim() !== "";
+  const shown = useMemo(() => blocks.filter((b) => matchesQuery(searchText(b), query)), [blocks, query]);
+  // The trace panel follows the table: it hides while search filters its block out.
+  const traceVisible = openId !== null && shown.some((b) => b.block_id === openId);
+
   return (
     <Card>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Block Measurements</h2>
-        {!live && <Badge tone="warning">offline demo data (gateway not reachable)</Badge>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <h2 style={{ margin: 0 }}>Block Measurements</h2>
+          {!live && <Badge tone="warning">offline demo data (gateway not reachable)</Badge>}
+        </div>
+        <SearchBox value={query} onChange={setQuery} label="Search blocks"
+          placeholder="Search block ID, quarry, class, status…" />
       </div>
 
       {actionError && (
@@ -126,40 +142,52 @@ export function BlocksView({ role }: { role: Role }) {
           </button>
         </div>
       )}
-      <Table
-        columns={["Block ID", "Quarry", "L×W×H (m)", "Volume", "Tonnage", "Class", "Conf.", "Fee (INR)", "Status", "Actions"]}
-        rows={blocks.map((b) => [
-          <button
-            onClick={() => openTrace(b.block_id)}
-            style={{ background: "none", border: "none", color: "var(--sos-blue)", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: 13 }}
-            title="View lifecycle / audit trail"
-          >
-            {openId === b.block_id ? "▾ " : "▸ "}{b.block_id}
-          </button>,
-          b.quarry_id,
-          `${b.length_m} × ${b.width_m} × ${b.height_m}`,
-          `${b.volume_m3} m³`,
-          b.tonnage_mt != null ? `${b.tonnage_mt} MT` : "—",
-          classificationLabel(b.classification),
-          `${Math.round(b.confidence * 100)}%`,
-          inr(b.seigniorage_fee_inr),
-          <Badge tone={toneFor(b.status)}>{b.status}</Badge>,
-          <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {role !== "operator" && (
-              <Button variant="ghost" onClick={() => runOmeps(b.block_id)} disabled={busy === b.block_id}>
-                {busy === b.block_id ? "Syncing…" : "OMEPS sync"}
-              </Button>
-            )}
-            {b.status === "pending" && role !== "operator" && (
-              <>
-                <Button variant="success" onClick={() => act(b.block_id, "approve")}>Approve</Button>
-                <Button variant="danger" onClick={() => act(b.block_id, "flag")}>Flag</Button>
-              </>
-            )}
-          </span>,
-        ])}
-      />
-      {openId && (() => {
+      {/* Always mounted so screen readers announce the result count as it changes. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: searching ? 8 : 0, fontSize: 12, color: "var(--sos-text-muted)" }}>
+        <span aria-live="polite">{searching ? `${shown.length} of ${blocks.length} blocks match “${query.trim()}”` : ""}</span>
+        {searching && <button type="button" onClick={() => setQuery("")} style={clearButton}>Clear search</button>}
+      </div>
+      {searching && !shown.length ? (
+        <p style={{ margin: "8px 0 0", color: "var(--sos-text-muted)", fontSize: 13 }}>
+          No blocks match “{query.trim()}”. Search looks at block ID, quarry, status, class, category, source and
+          measurement method.
+        </p>
+      ) : (
+        <Table
+          columns={["Block ID", "Quarry", "L×W×H (m)", "Volume", "Tonnage", "Class", "Conf.", "Fee (INR)", "Status", "Actions"]}
+          rows={shown.map((b) => [
+            <button
+              onClick={() => openTrace(b.block_id)}
+              style={{ background: "none", border: "none", color: "var(--sos-blue)", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: 13 }}
+              title="View lifecycle / audit trail"
+            >
+              {openId === b.block_id ? "▾ " : "▸ "}{b.block_id}
+            </button>,
+            b.quarry_id,
+            `${b.length_m} × ${b.width_m} × ${b.height_m}`,
+            `${b.volume_m3} m³`,
+            b.tonnage_mt != null ? `${b.tonnage_mt} MT` : "—",
+            classificationLabel(b.classification),
+            `${Math.round(b.confidence * 100)}%`,
+            inr(b.seigniorage_fee_inr),
+            <Badge tone={statusTone(b.status)}>{b.status}</Badge>,
+            <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {role !== "operator" && (
+                <Button variant="ghost" onClick={() => runOmeps(b.block_id)} disabled={busy === b.block_id}>
+                  {busy === b.block_id ? "Syncing…" : "OMEPS sync"}
+                </Button>
+              )}
+              {b.status === "pending" && role !== "operator" && (
+                <>
+                  <Button variant="success" onClick={() => act(b.block_id, "approve")}>Approve</Button>
+                  <Button variant="danger" onClick={() => act(b.block_id, "flag")}>Flag</Button>
+                </>
+              )}
+            </span>,
+          ])}
+        />
+      )}
+      {traceVisible && (() => {
         const b = blocks.find((x) => x.block_id === openId);
         const sb = b ? seigniorageBreakdown(b.seigniorage_fee_inr) : null;
         return (
@@ -192,6 +220,10 @@ export function BlocksView({ role }: { role: Role }) {
     </Card>
   );
 }
+
+const clearButton: React.CSSProperties = {
+  background: "none", border: "none", padding: 0, color: "var(--sos-blue)", cursor: "pointer", fontSize: 12, fontWeight: 600,
+};
 
 function BreakRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (

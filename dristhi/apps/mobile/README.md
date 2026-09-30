@@ -29,5 +29,5 @@ Then merge `lib/main.dart` below and add dependencies in `pubspec.yaml`:
 ```
 
 ## Brand
-Uses the PeopleWave logo (place `assets/peoplewave-logo.png`) and the StartupOS
+Uses the PeopleWave logo (`assets/peoplewave-logo.png`) and the StartupOS
 color palette (see `packages/ui/src/styles/tokens.css` for the hex values).

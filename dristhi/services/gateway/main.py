@@ -34,6 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
 from store import get_store
+from audit_changes import ASSESSMENT_FIELDS, MEASUREMENT_FIELDS, STATUS_FIELDS, snapshot
 from iot_bridge import IoTBridge
 from roam_engine import RoamEngine
 from secure_link import DEVICE_ID_PATTERN, MAX_ENVELOPE_BYTES, PROTOCOL, LinkError, LinkRegistry
@@ -79,9 +80,16 @@ def ingest_block(robot_id: str, data: dict) -> dict:
         "category_name": a.get("category_name"),
         "lat": data.get("lat"), "lon": data.get("lon"),
     }
+    # A re-capture overwrites an existing block: keep what it replaced.
+    prev = store.get_block(block_id)
+    was_measured, was_assessed = snapshot(prev, MEASUREMENT_FIELDS), snapshot(prev, ASSESSMENT_FIELDS)
     saved = store.upsert_block(block)
-    store.add_audit(block_id, "measured", robot_id, {"method": m["measurement_method"], "via": data.get("via", "http")})
-    store.add_audit(block_id, "classified", "seigniorage-engine", {"class": a["classification"]})
+    store.add_audit(block_id, "measured", robot_id, {
+        "method": m["measurement_method"], "via": data.get("via", "http"),
+        "before": was_measured, "after": snapshot(saved, MEASUREMENT_FIELDS)})
+    store.add_audit(block_id, "classified", "seigniorage-engine", {
+        "class": a["classification"],
+        "before": was_assessed, "after": snapshot(saved, ASSESSMENT_FIELDS)})
     record_legacy_calculation(
         store, block, m, a, source=source, via=data.get("via", "http"), actor=robot_id,
         inputs={"block_id": block_id, "quarry_id": quarry_id, "source": source,
@@ -195,10 +203,11 @@ def approve(block_id: str, p: Principal = Depends(require_role("officer"))):
 
 @app.post("/blocks/{block_id}/flag")
 def flag(block_id: str, p: Principal = Depends(require_role("officer"))):
+    before = snapshot(store.get_block(block_id), STATUS_FIELDS)
     b = store.set_status(block_id, "flagged")
     if not b:
         raise HTTPException(404, "block not found")
-    store.add_audit(block_id, "flagged", p.username, {})
+    store.add_audit(block_id, "flagged", p.username, {"before": before, "after": snapshot(b, STATUS_FIELDS)})
     return b
 
 
@@ -272,11 +281,15 @@ def field_estimate(req: FieldEstimateRequest, p: Principal = Depends(verify_toke
             "rate_per_m3_inr": a["rate_per_m3_inr"], "tonnage_mt": a["tonnage_mt"],
             "category_name": a["category_name"], "lat": req.lat, "lon": req.lon,
         }
+        prev = store.get_block(req.block_id)
+        was_measured, was_assessed = snapshot(prev, MEASUREMENT_FIELDS), snapshot(prev, ASSESSMENT_FIELDS)
         saved = store.upsert_block(block)
-        store.add_audit(req.block_id, "measured", actor,
-                        {"method": m["measurement_method"], "via": "field-capture"})
-        store.add_audit(req.block_id, "classified", "seigniorage-engine",
-                        {"class": a["classification"]})
+        store.add_audit(req.block_id, "measured", actor, {
+            "method": m["measurement_method"], "via": "field-capture",
+            "before": was_measured, "after": snapshot(saved, MEASUREMENT_FIELDS)})
+        store.add_audit(req.block_id, "classified", "seigniorage-engine", {
+            "class": a["classification"],
+            "before": was_assessed, "after": snapshot(saved, ASSESSMENT_FIELDS)})
         record_legacy_calculation(
             store, block, m, a, source="mobile", via="field-capture", actor=actor,
             inputs={"marker_real_mm": req.marker_real_mm, "marker_pixels": req.marker_pixels,
@@ -304,9 +317,13 @@ def omeps_sync(block_id: str, weighbridge_weight_mt: Optional[float] = None,
             "block_id": block_id, "ai_volume_m3": b["volume_m3"],
             "weighbridge_weight_mt": weighbridge_weight_mt,
         }).json()
-    store.add_audit(block_id, "omeps_synced", p.username, res)
+    # Re-read the block: it may have been decided while OMEPS was answering.
+    current = store.get_block(block_id)
+    before = snapshot(current, STATUS_FIELDS)
     if res.get("anomaly"):
-        store.set_status(block_id, "flagged")
+        current = store.set_status(block_id, "flagged")
+    store.add_audit(block_id, "omeps_synced", p.username,
+                    {**res, "before": before, "after": snapshot(current, STATUS_FIELDS)})
     return res
 
 
@@ -536,6 +553,7 @@ def _decide(block_id: str, decision: str, p: Principal, note: Optional[str]) -> 
         raise HTTPException(422, "This block has calculation warnings or an OMEPS flag; "
                                  "add a justification note to approve it.")
     status = "approved" if decision == "approve" else "rejected"
+    before = snapshot(b, STATUS_FIELDS)
     updated = store.set_status_if(block_id, status, _DECIDABLE)
     if not updated:  # someone else decided it first
         raise HTTPException(409, "block was decided concurrently")
@@ -545,8 +563,9 @@ def _decide(block_id: str, decision: str, p: Principal, note: Optional[str]) -> 
         "e_transit_pass_no": etp,
         "total_payable_inr": ((calc or {}).get("outputs") or {}).get("total_payable_inr"),
     })
-    store.add_audit(block_id, status, p.username,
-                    {k: v for k, v in {"note": note, "e_transit_pass_no": etp}.items() if v})
+    store.add_audit(block_id, status, p.username, {
+        **{k: v for k, v in {"note": note, "e_transit_pass_no": etp}.items() if v},
+        "before": before, "after": snapshot(updated, STATUS_FIELDS)})
     return {**rec, "block": updated}
 
 

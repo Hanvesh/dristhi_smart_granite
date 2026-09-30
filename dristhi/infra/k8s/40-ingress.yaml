@@ -1,0 +1,83 @@
+# Public entry point: GKE Ingress (global external Application Load Balancer)
+# on a reserved static IP, with a Google-managed TLS certificate and HTTP->HTTPS
+# redirect. Hostnames are Cloud Endpoints DNS names that resolve to that IP:
+#   <name>.endpoints.<PROJECT_ID>.cloud.goog
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: drishti-web-backend
+  namespace: drishti
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: /healthz
+    port: 8080
+  timeoutSec: 60
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: drishti-gateway-backend
+  namespace: drishti
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: /health
+    port: 8080
+  timeoutSec: 60
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: drishti-frontend
+  namespace: drishti
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: drishti-demo-cert
+  namespace: drishti
+spec:
+  domains:
+    - ${PORTAL_HOST}
+    - ${ROBOT_HOST}
+    - ${API_HOST}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: drishti
+  namespace: drishti
+  labels: { app.kubernetes.io/part-of: drishti }
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: ${STATIC_IP_NAME}
+    networking.gke.io/managed-certificates: drishti-demo-cert
+    networking.gke.io/v1beta1.FrontendConfig: drishti-frontend
+spec:
+  rules:
+    - host: ${PORTAL_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: portal, port: { number: 80 } }
+    - host: ${ROBOT_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: robot-console, port: { number: 80 } }
+    - host: ${API_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: gateway, port: { number: 8080 } }

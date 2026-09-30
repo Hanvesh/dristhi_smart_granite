@@ -1,0 +1,9 @@
+# DRISHTI on GKE. Files in this folder are templates rendered by
+# scripts/deploy_gke.sh (envsubst on ${REGISTRY} ${TAG} ${PORTAL_HOST}
+# ${ROBOT_HOST} ${API_HOST} ${STATIC_IP_NAME}); apply them through that script.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: drishti
+  labels:
+    app.kubernetes.io/part-of: drishti

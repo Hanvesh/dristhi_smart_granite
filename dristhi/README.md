@@ -64,8 +64,9 @@ Then open:
 
 ## Notes on placeholders
 
-Where real assets/specs are not available, generic placeholders are used and clearly marked:
-- **PeopleWave logo**: an inline SVG placeholder in `packages/ui`. Drop the real PNG/SVG in to replace.
+Where real assets/specs are not available, generic placeholders are used and clearly marked.
+(The PeopleWave logo is the official artwork: transparent PNGs in `packages/ui/src/assets/`,
+favicons in each app's `public/`.)
 - **StartupOS design system**: a self-contained token set approximating the brand palette from the proposal.
 - **AI models (YOLOv11 / Depth Anything V2)**: the vision service ships a deterministic mock estimator so the full pipeline runs without GPUs/model weights. Swap in real models via the documented interface.
 - **AP seigniorage fee schedule**: generic slab values in `services/seigniorage/rules.py`.

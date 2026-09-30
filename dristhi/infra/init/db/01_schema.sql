@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
     block_id    TEXT REFERENCES blocks(block_id),
     event_type  TEXT NOT NULL,   -- captured | measured | classified | approved | flagged | dispatched | omeps_synced
     actor       TEXT,
-    detail      JSONB,
+    detail      JSONB,           -- event facts; block changes add "before"/"after" (services/gateway/audit_changes.py)
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

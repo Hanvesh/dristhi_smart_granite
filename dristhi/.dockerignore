@@ -1,0 +1,16 @@
+# Build context for infra/docker/web.Dockerfile (npm workspaces root).
+# Allow-list only what the two SPA builds need; the Python services have their
+# own contexts (services/*/.dockerignore).
+*
+!package.json
+!package-lock.json
+!packages/ui
+!apps/portal
+!apps/robot-console
+!infra/docker/nginx-spa.conf
+
+**/node_modules
+**/dist
+**/.vite
+**/*.tsbuildinfo
+**/*.log

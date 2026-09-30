@@ -18,6 +18,38 @@ export const fmtTime = (ts?: string | null) => {
 
 export const short = (s?: string | null, n = 10) => (s ? (s.length > n ? `${s.slice(0, n)}…` : s) : "—");
 
+/** Badge tone for a block status. */
+export const statusTone = (status?: string | null) =>
+  status === "approved" ? "success" : status === "flagged" || status === "rejected" ? "danger" : "warning";
+
+/** Case-insensitive search: every space-separated term must appear somewhere in `text`. */
+export function matchesQuery(text: string, query: string): boolean {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return true;
+  const haystack = text.toLowerCase();
+  return terms.every((t) => haystack.includes(t));
+}
+
+/** Search input used by the list pages. Escape clears it. */
+export function SearchBox({ value, onChange, label, placeholder }: {
+  value: string; onChange: (v: string) => void; label: string; placeholder: string;
+}) {
+  return (
+    <input
+      type="search"
+      aria-label={label}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => { if (e.key === "Escape" && value) { e.preventDefault(); onChange(""); } }}
+      style={{
+        padding: "8px 10px", border: "1px solid var(--sos-border)", borderRadius: "var(--sos-radius-sm)",
+        fontSize: 13, fontFamily: "inherit", width: 300, maxWidth: "100%", boxSizing: "border-box",
+      }}
+    />
+  );
+}
+
 export function errText(e: unknown): string {
   if (e instanceof ApiError) return e.detail || `Gateway returned HTTP ${e.status}.`;
   return "Gateway not reachable. Start the backend (./scripts/bootstrap.sh) and try again.";

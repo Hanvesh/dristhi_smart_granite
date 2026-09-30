@@ -1,4 +1,4 @@
-import type { Block } from "./api";
+import type { AuditEvent, Block, BlockSnapshot } from "./api";
 
 // Offline fallback blocks. Enriched with the same MT basis / rate / category
 // fields the live backend pipeline produces, so the Portal renders identical
@@ -57,5 +57,54 @@ export const DEMO_BLOCKS: Block[] = [
     source: "mobile",
     status: "flagged",
     measurement_method: "mobile_monocular",
+  },
+];
+
+// Offline audit trail for the demo blocks above, newest first. Same
+// before/after shape the gateway records (services/gateway/audit_changes.py).
+const minsAgo = (m: number) => new Date(Date.now() - m * 60000).toISOString();
+const measuredFields = (b: Block): BlockSnapshot => ({
+  length_m: b.length_m, width_m: b.width_m, height_m: b.height_m, volume_m3: b.volume_m3,
+  confidence: b.confidence, measurement_method: b.measurement_method, status: "pending",
+});
+const assessedFields = (b: Block): BlockSnapshot => ({
+  classification: b.classification, category_name: b.category_name, rate_per_m3_inr: b.rate_per_m3_inr,
+  seigniorage_fee_inr: b.seigniorage_fee_inr, tonnage_mt: b.tonnage_mt,
+});
+const [approvedBlock, , flaggedBlock] = DEMO_BLOCKS;
+const pending: BlockSnapshot = { status: "pending" };
+
+export const DEMO_AUDIT: AuditEvent[] = [
+  {
+    block_id: approvedBlock.block_id, event_type: "approved", actor: "officer", created_at: minsAgo(3),
+    detail: { e_transit_pass_no: "ETP-AP-4821", before: pending, after: { status: "approved" } },
+  },
+  {
+    block_id: approvedBlock.block_id, event_type: "omeps_synced", actor: "officer", created_at: minsAgo(4),
+    detail: { anomaly: false, message: "Synced to OMEPS 2.0", before: pending, after: pending },
+  },
+  {
+    block_id: approvedBlock.block_id, event_type: "classified", actor: "seigniorage-engine", created_at: minsAgo(5),
+    detail: { class: approvedBlock.classification, fee_inr: approvedBlock.seigniorage_fee_inr, before: null, after: assessedFields(approvedBlock) },
+  },
+  {
+    block_id: approvedBlock.block_id, event_type: "measured", actor: "DRISHTI-BOT-01", created_at: minsAgo(6),
+    detail: { method: approvedBlock.measurement_method, confidence: approvedBlock.confidence, before: null, after: measuredFields(approvedBlock) },
+  },
+  {
+    block_id: flaggedBlock.block_id, event_type: "omeps_synced", actor: "officer", created_at: minsAgo(20),
+    detail: {
+      anomaly: true, weighbridge_volume_m3: 2.37, divergence: 0.468,
+      message: "Anomaly: AI vs weighbridge divergence exceeds tolerance",
+      before: pending, after: { status: "flagged" },
+    },
+  },
+  {
+    block_id: flaggedBlock.block_id, event_type: "classified", actor: "seigniorage-engine", created_at: minsAgo(24),
+    detail: { class: flaggedBlock.classification, before: null, after: assessedFields(flaggedBlock) },
+  },
+  {
+    block_id: flaggedBlock.block_id, event_type: "measured", actor: "mobile", created_at: minsAgo(25),
+    detail: { method: flaggedBlock.measurement_method, via: "field-capture", before: null, after: measuredFields(flaggedBlock) },
   },
 ];

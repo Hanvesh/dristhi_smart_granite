@@ -24,7 +24,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       background: "linear-gradient(135deg, #0f1e38, var(--sos-dark))" }}>
       <Card style={{ width: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <BrandLogo height={40} />
+          <BrandLogo variant="full" height={52} />
           <h2 style={{ margin: "16px 0 4px" }}>Robot View</h2>
           <p style={{ margin: 0, color: "var(--sos-text-muted)" }}>Robot-operator sign-in · capture &amp; transmit</p>
         </div>

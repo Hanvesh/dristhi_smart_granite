@@ -28,7 +28,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     >
       <Card style={{ width: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <BrandLogo height={40} />
+          <BrandLogo variant="full" height={52} />
           <h2 style={{ margin: "16px 0 4px", color: "var(--sos-dark)" }}>DRISHTI Portal</h2>
           <p style={{ margin: 0, color: "var(--sos-text-muted)" }}>Officer &amp; Operator Sign-in</p>
         </div>

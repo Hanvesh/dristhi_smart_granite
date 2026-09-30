@@ -287,4 +287,4 @@ Have Part 5 screenshots ready as a backup slide in case the laptop misbehaves.
 | OMEPS 2.0 | mock adapter (same contract) | real OMEPS REST client |
 | Robot transport | AWS IoT Core + HTTP fallback | AWS IoT Core on Jetson |
 | 3D quarry view | live Three.js scene (terrain + blocks at measured size + roaming rover) | fed by real robot telemetry + point clouds |
-| PeopleWave logo / StartupOS | placeholders | official assets |
+| PeopleWave logo / StartupOS | official PeopleWave logo; placeholder StartupOS tokens | official StartupOS token set |

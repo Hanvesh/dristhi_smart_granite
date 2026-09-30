@@ -1,0 +1,246 @@
+# Backend: FastAPI gateway + the three compute services it calls.
+# vision / seigniorage / omeps are ClusterIP-only (no auth; reached only by the gateway).
+apiVersion: v1
+kind: Service
+metadata:
+  name: vision
+  namespace: drishti
+  labels: { app.kubernetes.io/name: vision, app.kubernetes.io/part-of: drishti }
+spec:
+  selector: { app.kubernetes.io/name: vision }
+  ports:
+    - { name: http, port: 8001, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vision
+  namespace: drishti
+  labels: { app.kubernetes.io/name: vision, app.kubernetes.io/part-of: drishti }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app.kubernetes.io/name: vision }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: vision, app.kubernetes.io/part-of: drishti }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: vision
+          image: ${REGISTRY}/vision:${TAG}
+          ports:
+            - { name: http, containerPort: 8001 }
+          env:
+            - { name: DRISHTI_VISION_BACKEND, value: mock }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seigniorage
+  namespace: drishti
+  labels: { app.kubernetes.io/name: seigniorage, app.kubernetes.io/part-of: drishti }
+spec:
+  selector: { app.kubernetes.io/name: seigniorage }
+  ports:
+    - { name: http, port: 8002, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seigniorage
+  namespace: drishti
+  labels: { app.kubernetes.io/name: seigniorage, app.kubernetes.io/part-of: drishti }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app.kubernetes.io/name: seigniorage }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: seigniorage, app.kubernetes.io/part-of: drishti }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: seigniorage
+          image: ${REGISTRY}/seigniorage:${TAG}
+          ports:
+            - { name: http, containerPort: 8002 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: omeps
+  namespace: drishti
+  labels: { app.kubernetes.io/name: omeps, app.kubernetes.io/part-of: drishti }
+spec:
+  selector: { app.kubernetes.io/name: omeps }
+  ports:
+    - { name: http, port: 8003, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omeps
+  namespace: drishti
+  labels: { app.kubernetes.io/name: omeps, app.kubernetes.io/part-of: drishti }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app.kubernetes.io/name: omeps }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: omeps, app.kubernetes.io/part-of: drishti }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: omeps
+          image: ${REGISTRY}/omeps-adapter:${TAG}
+          ports:
+            - { name: http, containerPort: 8003 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+---
+# Gateway: exposed through the Ingress (API host) and through each SPA's /api proxy.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: drishti
+  labels: { app.kubernetes.io/name: gateway, app.kubernetes.io/part-of: drishti }
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "drishti-gateway-backend"}'
+spec:
+  selector: { app.kubernetes.io/name: gateway }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: drishti
+  labels: { app.kubernetes.io/name: gateway, app.kubernetes.io/part-of: drishti }
+spec:
+  # Single replica + Recreate: robot-link sessions and roam threads are in-memory,
+  # so two gateways must never serve at the same time.
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app.kubernetes.io/name: gateway }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: gateway, app.kubernetes.io/part-of: drishti }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        # The gateway picks its store once at import time and silently falls back
+        # to the in-memory store if the DRISHTI schema isn't there yet. Wait for it.
+        - name: wait-for-db
+          image: ${REGISTRY}/postgis:16-3.4
+          command:
+            - sh
+            - -c
+            - |
+              until [ "$(psql "$DATABASE_URL" -tAc "SELECT to_regclass('public.blocks') IS NOT NULL AND to_regclass('public.robots') IS NOT NULL" 2>/dev/null)" = "t" ]; do
+                echo "waiting for postgres schema..."; sleep 3
+              done
+              echo "postgres schema ready"
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: drishti-db, key: DATABASE_URL } }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+      containers:
+        - name: gateway
+          image: ${REGISTRY}/gateway:${TAG}
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: drishti-db, key: DATABASE_URL } }
+            - { name: VISION_URL, value: "http://vision:8001" }
+            - { name: SEIGNIORAGE_URL, value: "http://seigniorage:8002" }
+            - { name: OMEPS_URL, value: "http://omeps:8003" }
+            - { name: DRISHTI_IOT_MODE, value: "off" }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          # Restart if the gateway ended up on the in-memory store or lost its
+          # Postgres connection (PgStore holds one connection and never reconnects).
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import json,sys,urllib.request as u; h=json.load(u.urlopen('http://127.0.0.1:8080/health',timeout=4)); u.urlopen('http://127.0.0.1:8080/robots',timeout=4).read(); sys.exit(0 if h.get('store')=='postgres' else 1)"
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }

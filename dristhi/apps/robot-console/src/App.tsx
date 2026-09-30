@@ -235,7 +235,7 @@ function Dashboard({ session, onSignOut }: { session: Session; onSignOut: () => 
       <header style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottom: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.85)", padding: "10px 16px", backdropFilter: "blur(6px)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexWrap: "wrap" }}>
           <a href={portalUrl()} style={backLink} title="Return to the DRISHTI Portal">← Back to Portal</a>
-          <BrandLogo height={26} />
+          <BrandLogo height={22} />
           <span style={{ fontWeight: 700 }}>Robot View</span>
           <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, color: "#9ca3af" }}>CAPTURE &amp; TRANSMIT ONLY</span>
           <select

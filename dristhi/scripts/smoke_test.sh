@@ -6,6 +6,10 @@
 set -uo pipefail
 
 GW="${GATEWAY:-http://localhost:8080}"
+# Internal services (override when they're not on localhost, e.g. via kubectl port-forward).
+VISION="${VISION_URL:-http://localhost:8001}"
+SEIGNIORAGE="${SEIGNIORAGE_URL:-http://localhost:8002}"
+OMEPS="${OMEPS_URL:-http://localhost:8003}"
 PASS=0; FAIL=0
 check() { # desc, actual, expected-substring
   if echo "$2" | grep -q "$3"; then echo "  PASS: $1"; PASS=$((PASS+1));
@@ -14,9 +18,9 @@ check() { # desc, actual, expected-substring
 
 echo "== Health =="
 check "gateway health"     "$(curl -s $GW/health)"       '"status":"ok"'
-check "vision health"      "$(curl -s http://localhost:8001/health)"  '"status":"ok"'
-check "seigniorage health" "$(curl -s http://localhost:8002/health)"  '"status":"ok"'
-check "omeps health"       "$(curl -s http://localhost:8003/health)"  '"status":"ok"'
+check "vision health"      "$(curl -s $VISION/health)"       '"status":"ok"'
+check "seigniorage health" "$(curl -s $SEIGNIORAGE/health)"  '"status":"ok"'
+check "omeps health"       "$(curl -s $OMEPS/health)"        '"status":"ok"'
 
 echo "== Capture pipeline (measure -> assess -> persist) =="
 CAP=$(curl -s -X POST $GW/captures -H 'Content-Type: application/json' \

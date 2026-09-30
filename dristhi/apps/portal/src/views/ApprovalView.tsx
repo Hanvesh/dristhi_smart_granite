@@ -35,7 +35,17 @@ export function ApprovalView() {
   const draft = (id: string) => drafts[id] ?? emptyDraft;
   const patch = (id: string, p: Partial<Draft>) => setDrafts((d) => ({ ...d, [id]: { ...(d[id] ?? emptyDraft), ...p } }));
 
-  const decide = async (id: string, decision: "approve" | "reject") => {
+  const decide = async (id: string, decision: "approve" | "reject", needsNote: boolean) => {
+    // Say why instead of silently doing nothing: the gateway would refuse anyway.
+    if (!draft(id).note.trim() && (decision === "reject" || needsNote)) {
+      patch(id, {
+        error: decision === "reject"
+          ? "Add the reason for rejecting this block in the officer note."
+          : "This block has calculation warnings or an OMEPS flag. Add a justification in the officer note to approve it.",
+      });
+      document.getElementById(`note-${id}`)?.focus();
+      return;
+    }
     patch(id, { busy: true, error: null });
     try {
       const rec = await api.decide(id, decision, draft(id).note.trim() || undefined);
@@ -165,15 +175,15 @@ export function ApprovalView() {
                   Officer note {needsNote ? "(required to approve)" : "(required to reject)"}
                 </label>
                 <textarea id={`note-${b.block_id}`} rows={2} maxLength={500} value={d.note}
-                  onChange={(e) => patch(b.block_id, { note: e.target.value })} style={{ ...inputStyle, resize: "vertical" }} />
+                  onChange={(e) => patch(b.block_id, { note: e.target.value, error: null })} style={{ ...inputStyle, resize: "vertical" }} />
               </div>
             </div>
 
             {d.error && <Banner tone="danger">{d.error}</Banner>}
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <Button variant="danger" onClick={() => decide(b.block_id, "reject")} disabled={d.busy || !d.note.trim()}>Reject</Button>
-              <Button variant="success" onClick={() => decide(b.block_id, "approve")} disabled={d.busy || (needsNote && !d.note.trim())}>
+              <Button variant="danger" onClick={() => decide(b.block_id, "reject", needsNote)} disabled={d.busy}>Reject</Button>
+              <Button variant="success" onClick={() => decide(b.block_id, "approve", needsNote)} disabled={d.busy}>
                 Approve &amp; issue e-transit pass
               </Button>
             </div>

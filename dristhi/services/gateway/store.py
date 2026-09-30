@@ -12,6 +12,8 @@ import threading
 from datetime import datetime, timezone
 from typing import Optional
 
+from audit_changes import ASSESSMENT_FIELDS, MEASUREMENT_FIELDS, snapshot
+
 try:
     import psycopg
     from psycopg.rows import dict_row
@@ -246,25 +248,32 @@ class MemoryStore:
             def ts(mins):
                 return (base + timedelta(minutes=step * 7 + mins)).isoformat()
 
+            # Same before/after shape the live endpoints record (audit_changes.py).
+            pending, final = {"status": "pending"}, {"status": b["status"]}
             self.audit.append({"block_id": bid, "event_type": "measured", "actor": actor_bot,
-                               "detail": {"method": b["measurement_method"], "confidence": b["confidence"]},
+                               "detail": {"method": b["measurement_method"], "confidence": b["confidence"],
+                                          "before": None,
+                                          "after": snapshot({**b, **pending}, MEASUREMENT_FIELDS)},
                                "created_at": ts(0)})
             self.audit.append({"block_id": bid, "event_type": "classified", "actor": "seigniorage-engine",
-                               "detail": {"class": b["classification"], "fee_inr": b["seigniorage_fee_inr"]},
+                               "detail": {"class": b["classification"], "fee_inr": b["seigniorage_fee_inr"],
+                                          "before": None, "after": snapshot(b, ASSESSMENT_FIELDS)},
                                "created_at": ts(1)})
             if b["status"] == "approved":
                 self.audit.append({"block_id": bid, "event_type": "omeps_synced", "actor": "officer",
-                                   "detail": {"anomaly": False, "message": "Synced to OMEPS 2.0"},
+                                   "detail": {"anomaly": False, "message": "Synced to OMEPS 2.0",
+                                              "before": pending, "after": pending},
                                    "created_at": ts(2)})
                 self.audit.append({"block_id": bid, "event_type": "approved", "actor": "officer",
-                                   "detail": {}, "created_at": ts(3)})
+                                   "detail": {"before": pending, "after": final}, "created_at": ts(3)})
             elif b["status"] == "flagged":
+                # An OMEPS anomaly flags the block itself (see main.omeps_sync),
+                # so the status change is recorded on this event.
                 self.audit.append({"block_id": bid, "event_type": "omeps_synced", "actor": "officer",
                                    "detail": {"anomaly": True, "divergence": 0.21,
-                                              "message": "AI vs weighbridge divergence exceeds tolerance"},
+                                              "message": "AI vs weighbridge divergence exceeds tolerance",
+                                              "before": pending, "after": final},
                                    "created_at": ts(2)})
-                self.audit.append({"block_id": bid, "event_type": "flagged", "actor": "officer",
-                                   "detail": {"reason": "OMEPS anomaly"}, "created_at": ts(3)})
             step += 1
 
     def list_quarries(self):

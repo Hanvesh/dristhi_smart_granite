@@ -51,11 +51,21 @@ export interface Block {
   granite_category?: string;
 }
 
+/** Block fields as an audit event recorded them. Only the fields that event is responsible for are present. */
+export type BlockSnapshot = { [K in keyof Block]?: Block[K] | null };
+
 export interface AuditEvent {
   block_id: string;
   event_type: string;
   actor: string;
-  detail: Record<string, unknown>;
+  /**
+   * Event facts. Events that change a block (measured, classified,
+   * omeps_synced, approved, rejected, flagged) also carry `before` and
+   * `after`: the fields they touched, just before and just after the event.
+   * `before` is null when the event created the block. Events recorded
+   * before the gateway started capturing this have neither key.
+   */
+  detail: Record<string, unknown> & { before?: BlockSnapshot | null; after?: BlockSnapshot | null };
   created_at: string;
 }
 
